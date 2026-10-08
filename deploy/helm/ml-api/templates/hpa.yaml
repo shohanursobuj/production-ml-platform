@@ -1,0 +1,22 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "ml-api.fullname" . }}
+  labels:
+    {{- include "ml-api.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: {{ if .Values.canary.enabled }}argoproj.io/v1alpha1{{ else }}apps/v1{{ end }}
+    kind: {{ if .Values.canary.enabled }}Rollout{{ else }}Deployment{{ end }}
+    name: {{ include "ml-api.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

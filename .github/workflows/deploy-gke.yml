@@ -1,0 +1,50 @@
+# Deploy a published image to GKE (infra/terraform). Keyless: GitHub OIDC -> Workload Identity.
+# Requires repo variables GCP_PROJECT, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_DEPLOYER_SA.
+name: deploy-gke
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag (git SHA) published by the ci workflow
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: europe-west3
+  CLUSTER: ml-platform
+  SOURCE_IMAGE: ghcr.io/${{ github.repository }}:${{ inputs.image_tag }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER }}
+          location: ${{ env.REGION }}
+      - name: Mirror image into Artifact Registry
+        id: image
+        run: |
+          target="${REGION}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/ml-platform/ml-api:${{ inputs.image_tag }}"
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker pull "$SOURCE_IMAGE" && docker tag "$SOURCE_IMAGE" "$target" && docker push "$target"
+          echo "repository=${target%:*}" >> "$GITHUB_OUTPUT"
+      - uses: azure/setup-helm@v4
+      - name: Canary rollout (Argo Rollouts, gated by Prometheus analysis)
+        run: |
+          helm upgrade --install ml-api deploy/helm/ml-api --namespace ml --create-namespace \
+            --set image.repository=${{ steps.image.outputs.repository }} \
+            --set image.tag=${{ inputs.image_tag }} \
+            --set canary.enabled=true \
+            --set monitoring.serviceMonitor=true,monitoring.prometheusRule=true

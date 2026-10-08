@@ -1,0 +1,42 @@
+image:
+  repository: ghcr.io/shohanursobuj/production-ml-platform
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+resources:
+  requests: {cpu: 250m, memory: 384Mi}
+  limits: {memory: 768Mi}
+
+env:
+  DRIFT_WINDOW: "500"
+  DRIFT_MIN_SAMPLES: "100"
+
+service:
+  port: 80
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Requires the Prometheus Operator CRDs (kube-prometheus-stack).
+monitoring:
+  serviceMonitor: false
+  prometheusRule: false
+
+# Progressive delivery with Argo Rollouts (requires its CRDs + controller).
+# When enabled, a Rollout replaces the Deployment: traffic shifts 20% -> 50% -> 100%,
+# and each step is gated by a Prometheus analysis of error rate and p95 latency.
+# A failed analysis aborts and rolls back automatically.
+canary:
+  enabled: false
+  prometheusAddress: http://kube-prometheus-stack-prometheus.monitoring:9090
+  maxErrorRate: 0.01
+  maxP95LatencySeconds: 0.05

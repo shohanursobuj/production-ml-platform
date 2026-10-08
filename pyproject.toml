@@ -1,0 +1,16 @@
+[project]
+name = "mlplatform"
+version = "0.1.0"
+description = "Reference production ML platform: train, gate, serve, observe, detect drift, retrain."
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]

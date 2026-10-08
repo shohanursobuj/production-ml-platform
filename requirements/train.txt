@@ -1,0 +1,3 @@
+-r serve.txt
+pandas==3.0.6
+pyarrow==25.0.1

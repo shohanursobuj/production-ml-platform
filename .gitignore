@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+data/
+artifacts/
+mlruns/
+.terraform/
+*.tfstate*
+.terraform.lock.hcl
+.DS_Store
+.env

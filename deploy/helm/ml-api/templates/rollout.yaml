@@ -1,0 +1,56 @@
+{{- if .Values.canary.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "ml-api.fullname" . }}
+  labels:
+    {{- include "ml-api.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ml-api.selectorLabels" . | nindent 6 }}
+  template:
+    {{- include "ml-api.podTemplate" . | nindent 4 }}
+  strategy:
+    canary:
+      analysis:
+        templates:
+          - templateName: {{ include "ml-api.fullname" . }}-slo
+        startingStep: 1
+      steps:
+        - setWeight: 20
+        - pause: {duration: 5m}
+        - setWeight: 50
+        - pause: {duration: 5m}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "ml-api.fullname" . }}-slo
+  labels:
+    {{- include "ml-api.labels" . | nindent 4 }}
+spec:
+  metrics:
+    - name: error-rate
+      interval: 1m
+      failureLimit: 2
+      successCondition: result[0] <= {{ .Values.canary.maxErrorRate }}
+      provider:
+        prometheus:
+          address: {{ .Values.canary.prometheusAddress }}
+          query: |
+            sum(rate(ml_api_requests_total{namespace="{{ .Release.Namespace }}",service="{{ include "ml-api.fullname" . }}",path="/predict",status=~"5.."}[2m]))
+              / clamp_min(sum(rate(ml_api_requests_total{namespace="{{ .Release.Namespace }}",service="{{ include "ml-api.fullname" . }}",path="/predict"}[2m])), 1e-9)
+    - name: p95-latency
+      interval: 1m
+      failureLimit: 2
+      successCondition: result[0] <= {{ .Values.canary.maxP95LatencySeconds }}
+      provider:
+        prometheus:
+          address: {{ .Values.canary.prometheusAddress }}
+          query: |
+            histogram_quantile(0.95, sum by (le) (rate(ml_api_inference_seconds_bucket{namespace="{{ .Release.Namespace }}",service="{{ include "ml-api.fullname" . }}"}[2m])))
+{{- end }}

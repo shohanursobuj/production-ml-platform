@@ -1,0 +1,9 @@
+# Runtime dependencies for the inference service.
+# scikit-learn / numpy / joblib must match requirements/train.txt so the pickled model loads.
+fastapi==0.143.0
+uvicorn==0.54.0
+pydantic==2.14.0
+prometheus-client==0.26.0
+scikit-learn==1.9.1
+numpy==2.5.3
+joblib==1.6.0
