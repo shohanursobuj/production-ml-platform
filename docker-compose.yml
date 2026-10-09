@@ -8,7 +8,7 @@ services:
       DRIFT_MIN_SAMPLES: "50"
 
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v3.4.0
+    image: ghcr.io/mlflow/mlflow:v3.17.0
     command: mlflow server --host 0.0.0.0 --port 5000
     ports: ["5000:5000"]
 

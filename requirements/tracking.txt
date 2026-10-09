@@ -1,2 +1,2 @@
 -r train.txt
-mlflow==3.4.0
+mlflow==3.17.0
