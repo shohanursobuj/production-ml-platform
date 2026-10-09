@@ -63,6 +63,29 @@ Drift detection on live traffic (`scripts/loadgen.py`, window of 500 requests):
 
 The second row is the interesting one: the model's output distribution barely moved, so accuracy-style dashboards would look healthy, while its inputs no longer resemble the training data. Monitoring inputs catches this; monitoring outputs alone does not.
 
+## Evidence
+
+Captured by the [`evidence` workflow](.github/workflows/evidence.yml), which you can re-run: it starts the full stack on a GitHub runner, trains a tracked model, sends 5 minutes of normal traffic, then drifted traffic until Prometheus reports `FeatureDrift` as **firing** (the job fails if it doesn't). The screenshots come straight from that run, [run #37887069181](https://github.com/shohanursobuj/production-ml-platform/actions/runs/37887069181) on 9 Oct 2026, which served 64k requests (257k predictions).
+
+**Grafana: drift appears the moment the input distribution changes.** Text-length PSI jumps from ~0 to ~3.5 at 05:15, while the prediction mix stays at 50/50 and latency stays flat. Without input monitoring, this incident would look healthy.
+
+![Grafana dashboard during the drift demo](docs/images/grafana-dashboard.png)
+
+**Prometheus: the alert fires after its 15-minute `for` window**, scoped to the drifted feature only.
+
+![Prometheus FeatureDrift alert firing](docs/images/prometheus-alerts.png)
+
+<details>
+<summary>More: raw PSI series, MLflow run, CI pipeline</summary>
+
+![PSI per feature in Prometheus](docs/images/prometheus-drift-psi.png)
+
+![MLflow run tracked during training](docs/images/mlflow-run.png)
+
+![CI pipeline: test, infra, train-and-gate, e2e-kind, publish](docs/images/ci-pipeline.png)
+
+</details>
+
 ## Run it
 
 ```bash
