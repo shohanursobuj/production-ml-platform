@@ -1,9 +1,9 @@
 {
-  "model_version": "202610081757-local",
+  "model_version": "202610190943-19eb960",
   "accuracy": 0.7908,
   "f1": 0.791,
   "roc_auc": 0.8777,
-  "latency_ms_p95": 0.25,
+  "latency_ms_p95": 0.73,
   "n_train": 8530,
   "n_eval": 1066
 }
